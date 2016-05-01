@@ -20,7 +20,7 @@ namespace YogaAppV3._0
         tblUser currentUser;
         tblUserLog currentUserLog;
         List<tblPos> poses = new List<tblPos>();  // allows for import of the tblPoses Table Data
-        string[] meditations = { "your breathing", "your heartbeat", "the sky", "a cow atop a hill", "the wind", "your body in contact with the floor" };
+        string[] meditations = { "your breathing, try inhaling for 8 seconds and exhaling for 10", "your heartbeat, try inhaling for 7 seconds and exhaling for 9", "the sky, try inhaling for 5 seconds and exhaling for 5", "a cow atop a hill, try inhaling for 8 seconds, holding for 10, then exhaling for 10", "the wind", "your body in contact with the floor" };
         Random rand = new Random();
         YogaAppUtility UtilityAccess = new YogaAppUtility();
 
@@ -265,8 +265,8 @@ namespace YogaAppV3._0
 
                 pnlUserHome.Visible = false;
                 pnlStretch.Visible = true;
-                timerStretchPnl.Interval = 60000 * calculatedTime;  
-                lblStretchInfo.Text = poses[index].BreakDown;
+                timerStretchPnl.Interval = 60000 * calculatedTime;
+                lblStretchInfo.Text = String.Format("{0}\nModification for this pose:{1}", poses[index].BreakDown, poses[index].Modification);
                 UtilityAccess.assignImageToPicBox(picBoxStretch, poses[index].PoseName);
                 index++;
                 overallIndex = 0;
@@ -298,8 +298,8 @@ namespace YogaAppV3._0
             overallIndex++;
             if (index == poses.Count)
                 index = 0;
-            System.Media.SystemSounds.Exclamation.Play(); 
-            lblStretchInfo.Text = poses[index].BreakDown;
+            System.Media.SystemSounds.Exclamation.Play();
+            lblStretchInfo.Text = String.Format("{0}\nModification for this pose:{1}", poses[index].BreakDown, poses[index].Modification);
             UtilityAccess.assignImageToPicBox(picBoxStretch, poses[index].PoseName);
             index++;
             if (overallIndex == numPoses)
@@ -342,6 +342,9 @@ namespace YogaAppV3._0
                 {
                     //Capture the UserID information to use throughout the App
                     currentUser = new tblUser { UserID = txtBoxUserNameLogIn.Text.Trim(), Password = txtBoxPasswordLogIn.Text.Trim() };
+                    List<tblUserLog> logHistory = new List<tblUserLog>();
+                    List<tblUserLog> validLogs = new List<tblUserLog>();
+                    string outMessage = "You have stretched ";
 
                     pnlUserHome.Visible = true;
                     pnlLogIn.Visible = false;
@@ -352,6 +355,68 @@ namespace YogaAppV3._0
                     userHomeScreenToolStripMenuItem.Enabled = true;
                     registrationToolStripMenuItem.Enabled = false;
                     tblUserLogsTableAdapter.FillBy(yogaAppDatabase3DataSet.tblUserLogs, currentUser.UserID);
+
+                    //query tblUserLog Table
+                    DateTime today = DateTime.Today;
+                    DateTime oneMonthAgo = today.AddDays(-30);
+                    logHistory = (from tblUserLog in context.tblUserLogs
+                                      select tblUserLog).ToList<tblUserLog>();
+
+                    //Creating list of Logs within Last month
+                    if (logHistory != null)
+                    {
+                        foreach (var item in logHistory)
+                        {
+                            //DateTime compDate = Convert.ToDateTime(item.TimeStamp);
+                            DateTime compDate = DateTime.Parse(item.TimeStamp);
+                            if (compDate >= oneMonthAgo)
+                                validLogs.Add(item);
+                        }
+
+                        if(validLogs.Count() >= 5)
+                        {
+                            bool fivePlus = false;
+                            int fullCount=0, armsCount=0, legsCount=0, torsoCount=0;
+                            foreach (var item in validLogs)
+                            {
+                                if (item.LogAreaStretched.Equals("Full"))
+                                    fullCount++;
+                                else if (item.LogAreaStretched.Equals("Arms"))
+                                    armsCount++;
+                                else if (item.LogAreaStretched.Equals("Legs"))
+                                    legsCount++;
+                                else 
+                                    torsoCount++;
+                            }
+                            if (fullCount >= 5)
+                            {
+                                outMessage += String.Format("Full body {0} times in the last month\n", fullCount);
+                                fivePlus = true;
+                            }
+                            if (armsCount >= 5)
+                            { 
+                                outMessage += String.Format("Arms {0} times in the last month\n", armsCount);
+                                fivePlus = true;
+                            }
+                            if (legsCount >= 5)
+                            { 
+                                outMessage += String.Format("Legs {0} times in the last month\n", legsCount);
+                                fivePlus = true;
+                            }
+                            if (torsoCount >= 5)
+                            { 
+                                outMessage += String.Format("Torso {0} times in the last month\n", torsoCount);
+                                fivePlus = true;
+                            }
+
+                            outMessage += "Why not try a new area today?";
+                            if(fivePlus)
+                                MessageBox.Show(outMessage);
+                        }
+                    }
+
+
+
                 }
                 else
                     txtBoxPasswordLogIn.Text = "";
